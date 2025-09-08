@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Alphabet - Listen and Write</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background: #f0f4f8;
+    margin: 0;
+    padding: 0;
+}
+.screen { display: none; padding: 20px; }
+.active { display: block; }
+h1 { font-size: 2rem; color: #333; }
+p { font-size: 1.1rem; color: #555; }
+button { padding: 12px 24px; margin: 10px; font-size: 1rem; border: none; border-radius: 8px; background: #6c63ff; color: white; cursor: pointer; }
+button:hover { background: #5548c8; }
+.inputs-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+    max-width: 1300px;
+    margin-left: auto;
+    margin-right: auto;
+}
+input {
+    padding: 12px;
+    font-size: 1.2rem;
+    width: 80px; /* Casillas más largas */
+    border-radius: 8px;
+    border: 2px solid #ccc;
+    text-align: center;
+    transition: border 0.3s, background 0.3s;
+}
+input.correct {
+    background-color: #4caf50;
+    color: white;
+    border-color: #4caf50;
+}
+#error-message {
+    font-size: 1.5rem;
+    color: red;
+    font-weight: bold;
+    margin-top: 10px;
+    display: none;
+}
+#bingo-message {
+    font-size: 3rem;
+    color: green;
+    font-weight: bold;
+    display: none;
+    margin-top: 20px;
+}
+</style>
+</head>
+<body>
+
+<div id="start-screen" class="screen active">
+<h1>Alphabet - Listen and Write</h1>
+<p>Watch the video and type the letters of the alphabet in the correct order. Uppercase or lowercase letters are accepted. Correct answers will turn green!</p>
+<button onclick="startActivity()">Start</button>
+</div>
+
+<div id="game-screen" class="screen">
+<h1>Alphabet - Listen and Write</h1>
+<iframe id="activity-video" src="https://player.vimeo.com/video/1115937495" width="800" height="500" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+
+<div class="inputs-container" id="inputs-container"></div>
+<div id="error-message">Error, try again!</div>
+<div id="bingo-message">BINGO... Good Job!</div>
+<button onclick="restartActivity()">Restart</button>
+</div>
+
+<canvas id="confetti-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;display:none;"></canvas>
+
+<script>
+const correctOrder = ["Q","M","Ñ","B","E","J","A","R","X","U","S","H","O","C","Y","P","Z","D","I","N","G","L","V","F","T","K","W"];
+let currentIndex = 0;
+let confettiInterval;
+
+function startActivity() {
+    document.getElementById('start-screen').classList.remove('active');
+    document.getElementById('game-screen').classList.add('active');
+    restartActivity();
+}
+
+function restartActivity() {
+    stopConfetti();
+    currentIndex = 0;
+    document.getElementById('bingo-message').style.display = 'none';
+    document.getElementById('error-message').style.display = 'none';
+
+    const container = document.getElementById('inputs-container');
+    container.innerHTML = '';
+
+    correctOrder.forEach((letter, index) => {
+        const input = document.createElement('input');
+        input.setAttribute('placeholder', `Letter ${index+1}`);
+        input.addEventListener('input', () => checkInput(input, index));
+        container.appendChild(input);
+    });
+
+    // Colocar el cursor en la primera casilla
+    container.firstChild.focus();
+}
+
+function checkInput(input, index) {
+    const value = input.value.trim().toUpperCase();
+    const correctLetter = correctOrder[index].toUpperCase();
+    const errorMsg = document.getElementById('error-message');
+    const inputs = document.getElementById('inputs-container').children;
+
+    if(value.length === 0){
+        input.classList.remove('correct');
+        errorMsg.style.display = 'none';
+        return;
+    }
+
+    if(index !== currentIndex || value !== correctLetter){
+        // Error: borrar la letra ingresada
+        input.value = '';
+        input.classList.remove('correct');
+        errorMsg.style.display = 'block';
+        return;
+    }
+
+    // Correct
+    input.classList.add('correct');
+    errorMsg.style.display = 'none';
+    currentIndex++;
+
+    // Mover el cursor a la siguiente casilla si existe
+    if(currentIndex < inputs.length){
+        inputs[currentIndex].focus();
+    }
+
+    if(currentIndex === correctOrder.length){
+        document.getElementById('bingo-message').style.display = 'block';
+        startConfetti();
+    }
+}
+
+// Confetti
+function startConfetti() {
+    const canvas = document.getElementById('confetti-canvas');
+    canvas.style.display = 'block';
+    const ctx = canvas.getContext('2d');
+    let pieces = Array.from({ length: 150 }, () => ({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight - window.innerHeight,
+        r: Math.random() * 6 + 4,
+        d: Math.random() * 10 + 10,
+        color: `hsl(${Math.random()*360},100%,50%)`,
+        tilt: Math.random()*10-10
+    }));
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    function draw() {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        pieces.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI*2,false);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+        });
+        update();
+    }
+    function update() {
+        pieces.forEach(p => {
+            p.y += Math.cos(p.d)+p.r/2;
+            if(p.y>canvas.height){p.y=-10; p.x=Math.random()*canvas.width;}
+        });
+    }
+    confettiInterval = setInterval(draw, 20);
+}
+
+function stopConfetti() {
+    clearInterval(confettiInterval);
+    document.getElementById('confetti-canvas').style.display = 'none';
+}
+</script>
+
+</body>
+</html>
